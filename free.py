@@ -1,75 +1,52 @@
 import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
-import numpy as np
 
-# Import data
-df = pd.read_csv('medical_examination.csv')
+def demographic_data_analyzer():
+    # Load the data
+    df = pd.read_csv("adult.data.csv")
 
-# Add 'overweight' column
-df['overweight'] = (df['weight'] / ((df['height'] / 100) ** 2) > 25).astype(int)
+    # 1. Number of each race represented in this dataset
+    race_count = df['race'].value_counts()
 
-# Normalize data by making 0 always good and 1 always bad
-df['cholesterol'] = (df['cholesterol'] > 1).astype(int)
-df['gluc'] = (df['gluc'] > 1).astype(int)
+    # 2. Average age of men
+    average_age_men = round(df[df['sex'] == 'Male']['age'].mean(), 1)
 
-# Draw Categorical Plot
-def draw_cat_plot():
-    # Create DataFrame for cat plot using melt
-    df_cat = pd.melt(
-        df,
-        id_vars=['cardio'],
-        value_vars=['cholesterol', 'gluc', 'smoke', 'alco', 'active', 'overweight']
-    )
+    # 3. Percentage with a Bachelor's degree
+    percentage_bachelors = round((df['education'] == 'Bachelors').mean() * 100, 1)
 
-    # Group and reformat the data
-    df_cat = df_cat.groupby(['cardio', 'variable', 'value']) \
-                   .size().reset_index(name='total')
+    # 4. Percentage with higher education that earn >50K
+    higher_education = df[df['education'].isin(['Bachelors', 'Masters', 'Doctorate'])]
+    lower_education = df[~df['education'].isin(['Bachelors', 'Masters', 'Doctorate'])]
 
-    # Draw the catplot
-    fig = sns.catplot(
-        x='variable',
-        y='total',
-        hue='value',
-        col='cardio',
-        kind='bar',
-        data=df_cat
-    ).fig
+    higher_education_rich = round((higher_education['salary'] == '>50K').mean() * 100, 1)
+    lower_education_rich = round((lower_education['salary'] == '>50K').mean() * 100, 1)
 
-    return fig
+    # 5. Minimum number of hours a person works per week
+    min_work_hours = df['hours-per-week'].min()
 
-# Draw Heat Map
-def draw_heat_map():
-    # Clean the data
-    df_heat = df[
-        (df['ap_lo'] <= df['ap_hi']) &
-        (df['height'] >= df['height'].quantile(0.025)) &
-        (df['height'] <= df['height'].quantile(0.975)) &
-        (df['weight'] >= df['weight'].quantile(0.025)) &
-        (df['weight'] <= df['weight'].quantile(0.975))
-    ]
+    # 6. Percentage of people working min hours who earn >50K
+    num_min_workers = df[df['hours-per-week'] == min_work_hours]
+    rich_percentage = round((num_min_workers['salary'] == '>50K').mean() * 100, 1)
 
-    # Calculate the correlation matrix
-    corr = df_heat.corr()
+    # 7. Country with highest % of >50K earners
+    rich_country_counts = df[df['salary'] == '>50K']['native-country'].value_counts()
+    total_country_counts = df['native-country'].value_counts()
+    rich_country_percentage = (rich_country_counts / total_country_counts * 100).round(1)
 
-    # Generate a mask for the upper triangle
-    mask = np.triu(np.ones_like(corr, dtype=bool))
+    highest_earning_country = rich_country_percentage.idxmax()
+    highest_earning_country_percentage = rich_country_percentage.max()
 
-    # Set up the matplotlib figure
-    fig, ax = plt.subplots(figsize=(12, 10))
+    # 8. Most popular occupation for those who earn >50K in India
+    top_IN_occupation = df[(df['native-country'] == 'India') & (df['salary'] == '>50K')]['occupation'].value_counts().idxmax()
 
-    # Draw the heatmap
-    sns.heatmap(
-        corr,
-        mask=mask,
-        annot=True,
-        fmt=".1f",
-        center=0,
-        vmax=.3,
-        vmin=-0.1,
-        square=True,
-        linewidths=.5,
-        cbar_kws={"shrink": .5}
-    )
-
-    return fig
+    return {
+        'race_count': race_count,
+        'average_age_men': average_age_men,
+        'percentage_bachelors': percentage_bachelors,
+        'higher_education_rich': higher_education_rich,
+        'lower_education_rich': lower_education_rich,
+        'min_work_hours': min_work_hours,
+        'rich_percentage': rich_percentage,
+        'highest_earning_country': highest_earning_country,
+        'highest_earning_country_percentage': highest_earning_country_percentage,
+        'top_IN_occupation': top_IN_occupation
+    }
